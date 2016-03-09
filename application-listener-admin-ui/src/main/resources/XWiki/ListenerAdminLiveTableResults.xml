@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<xwikidoc reference="XWiki.ListenerAdminLiveTableResults" locale="">
+  <web>XWiki</web>
+  <name>ListenerAdminLiveTableResults</name>
+  <language/>
+  <defaultLanguage/>
+  <translation>0</translation>
+  <parent>XWiki.ListenerAdmin</parent>
+  <creator>xwiki:XWiki.Admin</creator>
+  <author>xwiki:XWiki.Admin</author>
+  <customClass/>
+  <contentAuthor>xwiki:XWiki.Admin</contentAuthor>
+  <creationDate>1342879439000</creationDate>
+  <date>1342879439000</date>
+  <contentUpdateDate>1342879439000</contentUpdateDate>
+  <version>1.1</version>
+  <title>Listener Administration LiveTable Results</title>
+  <defaultTemplate/>
+  <validationScript/>
+  <comment/>
+  <minorEdit>false</minorEdit>
+  <syntaxId>xwiki/2.1</syntaxId>
+  <hidden>false</hidden>
+  <content>{{velocity}}
+#set($observation = $services.listeneradmin)
+#if (!$hasAdmin || !$observation.hasRequiredRights())
+  #set($discard = $services.localization.use('document','XWiki.ListenerAdminTranslations'))
+  {{error}}$services.localization.render('listener.admin.error.norights'){{/error}}
+#end
+#macro(getEvents $listener $listenersEvents)
+  #set($events = [])
+  #foreach($event in $listener.getEvents())
+    #set($eventQualifier = "$!event.getActionName()")
+    #set($eventFilter = "$!event.getEventFilter().getFilter()")
+    #if ("$!eventQualifier" == '')
+      #set($eventQualifier = "$!event.getNamespace()")
+    #end
+    #if ("$!eventFilter" == '')
+      #set($eventFilter = "$!event.getExtensionId().toString()")
+    #end
+    #if ("$!eventQualifier" == '')
+      #set($eventQualifier = "$!event.getJobType()")
+    #end
+    #if ("$!eventFilter" == '')
+      #set($eventFilter = "$!event.getJobId()")
+    #end
+    #if ("$!eventFilter" == '')
+      #set($eventFilter = "$!event.getTargetWikiId()")
+    #end
+    #if ("$!eventFilter" == '')
+      #set($ref = $!event.getReference())
+      #if ($ref)
+        #set($eventFilter = $services.model.serialize($ref).replaceAll("\\",""))
+      #end
+    #end
+    #if ("$!eventQualifier" == '')
+      #if ("$!eventFilter" == '' || "$!eventFilter" == '.*')
+        #set($eventQualifier = '')
+      #else
+        #set($eventQualifier = "($eventFilter)")
+      #end
+    #else
+      #if ("$!eventFilter" == '' || "$!eventFilter" == '.*')
+        #set($eventQualifier = "($eventQualifier)")
+      #else
+        #set($eventQualifier = "($eventQualifier,$eventFilter)")
+      #end
+    #end
+    #set($discard = $events.add("$event.getClass().getSimpleName()${escapetool.json($eventQualifier)}"))
+  #end
+  #set($eventsLabel = '')
+  #foreach($event in $sorttool.sort($events))
+    #set($eventsLabel = "$eventsLabel &lt;span class='label label-success'&gt;$event&lt;/span&gt;")
+  #end
+  #set($discard = $listenersEvents.put($listener.getName(), $eventsLabel))
+#end
+#set($componentListeners = $observation.getComponentListeners())
+#set($listeners = {})
+#set($listenersEvents = {})
+#foreach($listener in $componentListeners.entrySet())
+  #set($className = $listener.value.getClass().getName())
+  #set($classIndex = $className.lastIndexOf('.') + 1)
+  #set($discard = $listeners.put($listener.key, "${className.substring($classIndex)} &lt;span class='label label-info pull-right'&gt;C&lt;/span&gt;&lt;br/&gt;&lt;span class='small'&gt;${className.substring(0,$className.lastIndexOf('.'))}&lt;/span&gt;"))
+  #getEvents($listener.value $listenersEvents)
+#end
+#set($instanceListeners = $observation.getRegisteredListeners())
+#foreach($listener in $instanceListeners.entrySet())
+  #set($className = $listener.value.getClass().getName())
+  #set($classIndex = $className.lastIndexOf('.') + 1)
+  #set($componentListener = $componentListeners.get($listener.key))
+  #if($componentListener)
+    #if ($componentListener != $listener.value)
+      #if($componentListener.getClass().getName() == $listener.value.getClass().getSimpleName())
+        #set($discard = $listeners.put($listener.key, "${className.substring($classIndex)} &lt;span class='label label-warning'&gt;!=instance&lt;/span&gt;&lt;br/&gt;&lt;span class='small'&gt;${className.substring(0,$className.lastIndexOf('.'))}&lt;/span&gt;"))
+      #else
+        #set($discard = $listeners.put($listener.key, "${className.substring($classIndex)} &lt;span class='label label-danger'&gt;!=class&lt;/span&gt;&lt;br/&gt;&lt;span class='small'&gt;${className.substring(0,$className.lastIndexOf('.'))}&lt;/span&gt;"))
+        #getEvents($listener.value $listenersEvents)
+      #end
+    #end
+  #else
+    #set($discard = $listeners.put($listener.key, "${className.substring($classIndex)}&lt;br/&gt;&lt;span class='small'&gt;${className.substring(0,$className.lastIndexOf('.'))}&lt;/span&gt;"))
+    #getEvents($listener.value $listenersEvents)
+  #end
+#end
+#if("$!request.xpage" == 'plain')
+  $response.setContentType('application/json')
+#end  
+##==============================
+## Offset = item # at which to start displaying data
+##==============================
+#set($offset = $mathtool.toInteger($request.offset))
+## If no offset is specified, start at 0
+#if (!$offset)
+  #set($offset = 0)
+#else
+  ## offset starts from 0 in velocity and 1 in javascript
+  #set($offset = $offset - 1)
+  #if($offset &lt; 0)
+    #set($offset = 0)
+  #end
+#end
+##==================
+## Limit = # of items to display
+##==================
+#set($limit = $mathtool.toInteger($request.limit))
+## If no limit is specified, limit at 15 items
+#if (!$limit)
+  #set ($limit = 15)
+#end
+##==========
+## Sort direction
+##==========
+#set($order = "$!request.sort")
+#if($order != '')
+  #set($orderDirection = "$!{request.get('dir').toLowerCase()}")
+  #if("$!orderDirection" != '' &amp;&amp; "$!orderDirection" != 'asc')
+    #set($orderDirection = 'desc')
+  #end
+#end
+## ===
+## JSON
+## ===
+#set ($entries = $listeners.keySet())
+#set ($size = $entries.size())
+## Sort
+#if ($request.sort)
+  #if ($request.sort == "listenerName")
+    #set($entries = $sorttool.sort($listeners.keySet()))
+  #else
+    #if ($request.sort == "listenerClass")
+      #set($toSort = $listeners.entrySet())
+    #else
+      #set($toSort = $listenersEvents.entrySet())
+    #end
+    #set($entries = [])
+    #foreach($entry in $sorttool.sort($toSort, ["value:${request.dir}"]))
+      #set($discard = $entries.add($entry.key))
+    #end
+  #end
+#end
+## Filter
+#set($result = [])
+#foreach($entry in $entries)
+  #if ($limit &lt;= $result.size())
+    #break
+  #end
+  #if (($request.listenerName &amp;&amp; !$entry.toLowerCase().contains($request.listenerName.toLowerCase()))
+      || ($request.listenerClass &amp;&amp; !$listeners.get($entry).toLowerCase().contains($request.listenerClass.toLowerCase()))
+      || ($request.listenerEvents &amp;&amp; !$listenersEvents.get($entry).toLowerCase().contains($request.listenerEvents.toLowerCase())))
+    #set($offset = $offset + 1)
+    #set($size = $size - 1)
+  #else
+    #if ($velocityCount &gt;= $offset)
+      #set($void = $result.add($entry))
+    #end
+  #end
+#end
+{
+  "totalrows": $size,
+  "matchingtags": {},
+  "tags" : [],
+  "returnedrows": $result.size(),
+  "offset": $mathtool.toInteger($request.offset),
+  "sort": "$request.sort",
+  "dir": "$request.dir",
+  "reqNo": $mathtool.toInteger($request.reqNo),
+  "rows": [
+  #foreach( $entry in $result )
+    #set($listener = $listeners.get($entry))
+    #set($listenerEvents = $listenersEvents.get($entry))
+    #if($velocityCount &gt; 1) , #end
+    #if($observation.getListener($entry))
+      #set($checked = 'checked')
+    #else
+      #set($checked = '')
+    #end
+    {
+      "doc_viewable" : true,
+      "listenerName" : "$escapetool.javascript($entry)",
+      "listenerClass" : "$listener",
+      "listenerEvents" : "$listenerEvents",
+      "actions" : "${escapetool.json("&lt;form action='' enctype='multipart/form-data' method='post'&gt;
+        &lt;fieldset&gt;
+          &lt;input name='listener_name' value='$entry' type='hidden'/&gt;
+          &lt;div class='checkbox checkbox-slider~-~-b' style='margin:0'&gt;
+            &lt;label&gt;
+              &lt;input class='listener_state' name='listener_state' type='checkbox' $checked/&gt;&lt;span&gt;&lt;/span&gt;
+            &lt;/label&gt;
+          &lt;/div&gt;
+        &lt;/fieldset&gt;
+        &lt;/form&gt;")}"
+    }
+  #end
+  ]
+}
+{{/velocity}}</content>
+</xwikidoc>

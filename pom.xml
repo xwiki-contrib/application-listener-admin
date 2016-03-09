@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.xwiki.commons</groupId>
+    <artifactId>xwiki-commons</artifactId>
+    <version>6.4.4</version>
+  </parent>
+
+  <groupId>org.xwiki.contrib.listeneradmin</groupId>
+  <artifactId>application-listener-admin</artifactId>
+  <version>1.0-SNAPSHOT</version>
+  <name>Event Listeners Administration</name>
+  <description>Provide script service and UI to register/list/unregister listeners</description>
+  <properties>
+    <platform.version>${commons.version}</platform.version>
+    <rendering.version>${platform.version}</rendering.version>
+  </properties>
+  <packaging>pom</packaging>
+  <modules>
+    <module>application-listener-admin-ui</module>
+  </modules>
+  <developers>
+    <developer>
+      <id>dgervalle</id>
+      <name>Denis Gervalle</name>
+      <email>denis.gervalle at xwiki.com</email>
+      <timezone>+1</timezone>
+    </developer>
+  </developers>
+  <scm>
+    <connection>scm:git:git://github.com/xwiki-contrib/application-listener-admin.git</connection>
+    <developerConnection>scm:git:git@github.com:xwiki-contrib/application-listener-admin.git</developerConnection>
+    <url>https://github.com/xwiki-contrib/application-listener-admin/tree/master/</url>
+    <tag>HEAD</tag>
+  </scm>
+  <issueManagement>
+    <system>jira</system>
+    <url>http://jira.xwiki.org/jira/browse/LISTENADM</url>
+  </issueManagement>
+  <distributionManagement>
+    <repository>
+      <id>xwiki-staging</id>
+      <name>XWiki Staging Repository</name>
+      <url>http://nexus.xwiki.org/nexus/service/local/staging/deploy/maven2/</url>
+    </repository>
+  </distributionManagement>
+  <build>
+    <!-- Needed to add support for the XAR packaging -->
+    <extensions>
+      <extension>
+        <groupId>org.xwiki.commons</groupId>
+        <artifactId>xwiki-commons-tool-xar-handlers</artifactId>
+        <version>${commons.version}</version>
+      </extension>
+    </extensions>
+    <plugins>
+      <!-- The XAR packaging uses the XAR plugin and thus we need to define what version to use -->
+      <plugin>
+        <groupId>org.xwiki.commons</groupId>
+        <artifactId>xwiki-commons-tool-xar-plugin</artifactId>
+        <version>${commons.version}</version>
+      </plugin>
+    </plugins>
+  </build>
+</project>

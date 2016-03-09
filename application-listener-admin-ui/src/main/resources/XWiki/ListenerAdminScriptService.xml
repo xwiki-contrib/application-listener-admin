@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<xwikidoc reference="XWiki.ListenerAdminScriptService" locale="">
+  <web>XWiki</web>
+  <name>ListenerAdminScriptService</name>
+  <language/>
+  <defaultLanguage/>
+  <translation>0</translation>
+  <parent>ListenerAdmin</parent>
+  <creator>xwiki:XWiki.Admin</creator>
+  <author>xwiki:XWiki.Admin</author>
+  <customClass/>
+  <contentAuthor>xwiki:XWiki.Admin</contentAuthor>
+  <creationDate>1342879439000</creationDate>
+  <date>1342879439000</date>
+  <contentUpdateDate>1342879439000</contentUpdateDate>
+  <version>1.1</version>
+  <title>Listener Administration Script Service</title>
+  <defaultTemplate/>
+  <validationScript/>
+  <comment/>
+  <minorEdit>false</minorEdit>
+  <syntaxId>xwiki/2.1</syntaxId>
+  <hidden>false</hidden>
+  <content>{{groovy}}
+import org.xwiki.component.descriptor.*;
+import org.xwiki.component.manager.*;
+import org.xwiki.script.service.*;
+import org.xwiki.context.*;
+import org.xwiki.observation.*;
+import org.xwiki.security.authorization.*
+
+class ListenerAdmin implements ScriptService {
+  private ObservationManager observation;
+  private ContextualAuthorizationManager cam;
+  private ComponentManager cm;
+  private Map&lt;String, EventListener&gt; removedListeners = new java.util.concurrent.ConcurrentHashMap();
+
+  public boolean hasRequiredRights()
+  {
+    return cam.hasAccess(Right.PROGRAM);
+  }
+
+  public Map&lt;String, EventListener&gt; getRegisteredListeners() {
+    if (!hasRequiredRights()) return null;
+    Map result = new HashMap();
+    result.putAll(this.removedListeners);
+
+    // WARNING: This part depends on the implementation and use private method.
+    // DefaultObservationManager#getListenersByName() has private access.
+    // We are using the security flaw in Groovy to pass over this limitation.
+    result.putAll(this.observation.getListenersByName());
+
+    return result;
+  }
+
+  public Map&lt;String, EventListener&gt; getComponentListeners() {
+    if (!hasRequiredRights()) return null;
+    Map result = new HashMap();
+    for(EventListener listener : this.cm.getInstanceList(EventListener.class)) {
+      result.put(listener.getName(), listener);
+    }
+    return result;
+  }
+
+  public void addListener(EventListener eventListener)
+  {
+    if (!hasRequiredRights()) return;
+    this.observation.addListener(eventListener);
+    this.removedListeners.remove(eventListener.getName());
+  }
+
+  public void removeListener(String listenerName)
+  {
+    if (!hasRequiredRights()) return;
+    if (this.getComponentListeners().get(listenerName) == null) {
+      EventListener listener = this.observation.getListener(listenerName);
+      if (listener) {
+        this.removedListeners.put(listenerName, listener);
+      }
+    }
+    this.observation.removeListener(listenerName);
+  }
+
+  public EventListener getListener(String listenerName)
+  {
+    if (!hasRequiredRights()) return null;
+    return this.observation.getListener(listenerName);
+  }
+}
+
+def cm = services.component.getComponentManager(null)
+try {
+  if (request.refresh || request.unregister) {
+    cm.unregisterComponent(ScriptService.class, 'listeneradmin');
+  }
+  if (!request.unregister) {
+    cm.getInstance(ScriptService.class, 'listeneradmin');
+  }  
+} catch(ComponentLookupException e) {
+  DefaultComponentDescriptor descriptor = new DefaultComponentDescriptor(implementation: ListenerAdmin.class, role: ScriptService.class, roleHint: 'listeneradmin');
+  descriptor.addComponentDependency(new DefaultComponentDependency(name: 'observation', role: ObservationManager.class, roleHint: 'default'));
+  descriptor.addComponentDependency(new DefaultComponentDependency(name: 'cam', role: ContextualAuthorizationManager.class, roleHint: 'default'));
+  descriptor.addComponentDependency(new DefaultComponentDependency(name: 'cm', role: ComponentManager.class, roleHint: 'default'));
+  cm.registerComponent(descriptor);
+  out.println("{{success}}Script service successfully registered{{/success}}")
+}
+return;
+{{/groovy}}
+
+{{velocity}}
+## Only output this if the document is not included
+#if($doc.fullName == 'XWiki.ListenerAdminScriptService')
+#if ("$!services.listeneradmin" != '')
+{{info}}Script service is registered [$services.listeneradmin]{{/info}}
+#end
+
+{{html}}
+&lt;form action='' method='post'&gt;
+  &lt;fieldset&gt;
+  #if ("$!services.listeneradmin" == '')
+    &lt;input name='refresh' value='Register' type='submit' class='btn btn-primary'/&gt;
+  #else
+    &lt;input name='refresh' value='Refresh' type='submit' class='btn btn-primary'/&gt;
+    &lt;input name='unregister' value='Unregister' type='submit' class='btn btn-danger'/&gt;
+  #end  
+  &lt;/fieldset&gt;
+&lt;/form&gt;
+{{/html}}
+#end
+{{/velocity}}
+</content>
+</xwikidoc>
