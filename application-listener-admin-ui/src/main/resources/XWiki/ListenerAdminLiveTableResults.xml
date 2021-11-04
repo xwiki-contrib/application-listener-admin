@@ -72,9 +72,9 @@
   #set($eventsLabel = '')
   ## SortTool is deprecated since 12.0.
   #if ($collectiontool)
-    #set ($sortedEvents = $collectiontool.sort($namespaces))
+    #set ($sortedEvents = $collectiontool.sort($events))
   #else
-    #set ($sortedEvents = $sorttool.sort($namespaces))
+    #set ($sortedEvents = $sorttool.sort($events))
   #end
   #foreach($event in $sortedEvents)
     #set($eventsLabel = "$eventsLabel &lt;span class='label label-success'&gt;$event&lt;/span&gt;")
