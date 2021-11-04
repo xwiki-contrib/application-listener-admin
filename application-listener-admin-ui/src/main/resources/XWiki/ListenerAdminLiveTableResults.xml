@@ -70,7 +70,13 @@
     #set($discard = $events.add("$event.getClass().getSimpleName()${escapetool.json($eventQualifier)}"))
   #end
   #set($eventsLabel = '')
-  #foreach($event in $sorttool.sort($events))
+  ## SortTool is deprecated since 12.0.
+  #if ($collectiontool)
+    #set ($sortedEvents = $collectiontool.sort($namespaces))
+  #else
+    #set ($sortedEvents = $sorttool.sort($namespaces))
+  #end
+  #foreach($event in $sortedEvents)
     #set($eventsLabel = "$eventsLabel &lt;span class='label label-success'&gt;$event&lt;/span&gt;")
   #end
   #set($discard = $listenersEvents.put($listener.getName(), $eventsLabel))
@@ -146,7 +152,12 @@
 ## Sort
 #if ($request.sort)
   #if ($request.sort == "listenerName")
-    #set($entries = $sorttool.sort($listeners.keySet()))
+    ## SortTool is deprecated since 12.0.
+    #if ($collectiontool)
+      #set ($entries = $collectiontool.sort($listeners.keySet()))
+    #else
+      #set ($entries = $sorttool.sort($listeners.keySet()))
+    #end
   #else
     #if ($request.sort == "listenerClass")
       #set($toSort = $listeners.entrySet())
@@ -154,7 +165,13 @@
       #set($toSort = $listenersEvents.entrySet())
     #end
     #set($entries = [])
-    #foreach($entry in $sorttool.sort($toSort, ["value:${request.dir}"]))
+    ## SortTool is deprecated since 12.0.
+    #if ($collectiontool)
+      #set ($sortedEntries = $collectiontool.sort($toSort, ["value:${request.dir}"]))
+    #else
+      #set ($sortedEntries = $sorttool.sort($toSort, ["value:${request.dir}"]))
+    #end
+    #foreach($entry in $sortedEntries)
       #set($discard = $entries.add($entry.key))
     #end
   #end
